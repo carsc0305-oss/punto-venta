@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS detalle_ventas (
 INSERT OR IGNORE INTO roles (nombre, descripcion) VALUES ('Administrador', 'Acceso total al sistema');
 INSERT OR IGNORE INTO roles (nombre, descripcion) VALUES ('Cajero', 'Acceso a terminal de ventas');
 INSERT OR IGNORE INTO roles (nombre, descripcion) VALUES ('Almacenista', 'Acceso a gestión de inventario');
+INSERT OR IGNORE INTO roles (nombre, descripcion) VALUES ('Auxiliar Contable', 'Acceso a gestión tributaria y reportes contables');
 
 -- Insertar un usuario administrador por defecto (contraseña: admin, hasheada con SHA-256)
 INSERT OR IGNORE INTO usuarios (nombre_completo, nombre_usuario, contrasena, rol_id, activo) VALUES ('Administrador del Sistema', 'admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 1, 1);
@@ -63,3 +64,114 @@ INSERT OR IGNORE INTO usuarios (nombre_completo, nombre_usuario, contrasena, rol
 -- Migrar contraseña plaintext si existe de versiones anteriores
 UPDATE usuarios SET contrasena = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' WHERE nombre_usuario = 'admin' AND contrasena = 'admin';
 
+-- ============================================================
+-- GESTIÓN TRIBUTARIA
+-- ============================================================
+
+-- Tabla de clientes/contribuyentes
+CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ruc TEXT NOT NULL UNIQUE,
+    razon_social TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'ACTIVO'
+);
+
+-- Obligaciones tributarias por periodo
+CREATE TABLE IF NOT EXISTS obligaciones_tributarias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    periodo TEXT NOT NULL,
+    tipo_tributo TEXT NOT NULL,
+    monto_original REAL NOT NULL,
+    fecha_vencimiento DATE NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'PENDIENTE',
+
+    FOREIGN KEY (cliente_id)
+        REFERENCES clientes(id)
+        ON DELETE CASCADE,
+
+    CHECK (
+        tipo_tributo IN (
+            'IGV',
+            'RENTA_3RA',
+            'RENTA_4TA',
+            'RENTA_5TA',
+            'ESSALUD',
+            'ONP',
+            'AFP'
+        )
+    ),
+
+    CHECK (
+        estado IN ('PENDIENTE', 'PAGADO')
+    ),
+
+    CHECK (monto_original >= 0)
+);
+
+-- Pagos adelantados realizados por el contribuyente
+CREATE TABLE IF NOT EXISTS pagos_adelantados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    fecha_pago DATE NOT NULL,
+    monto REAL NOT NULL,
+    tipo_tributo_destino TEXT NOT NULL,
+
+    FOREIGN KEY (cliente_id)
+        REFERENCES clientes(id)
+        ON DELETE CASCADE,
+
+    CHECK (
+        tipo_tributo_destino IN (
+            'IGV',
+            'RENTA_3RA',
+            'RENTA_4TA',
+            'RENTA_5TA',
+            'ESSALUD',
+            'ONP',
+            'AFP'
+        )
+    ),
+
+    CHECK (monto > 0)
+);
+
+-- Imputación de pagos a obligaciones tributarias
+CREATE TABLE IF NOT EXISTS imputaciones_pago (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pago_id INTEGER NOT NULL,
+    obligacion_id INTEGER NOT NULL,
+    monto_aplicado REAL NOT NULL,
+
+    FOREIGN KEY (pago_id)
+        REFERENCES pagos_adelantados(id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (obligacion_id)
+        REFERENCES obligaciones_tributarias(id)
+        ON DELETE CASCADE,
+
+    CHECK (monto_aplicado > 0)
+);
+
+-- Índices para gestión tributaria
+CREATE INDEX IF NOT EXISTS idx_clientes_ruc
+ON clientes(ruc);
+
+CREATE INDEX IF NOT EXISTS idx_obligaciones_cliente
+ON obligaciones_tributarias(cliente_id);
+
+CREATE INDEX IF NOT EXISTS idx_obligaciones_periodo
+ON obligaciones_tributarias(periodo);
+
+CREATE INDEX IF NOT EXISTS idx_obligaciones_tipo
+ON obligaciones_tributarias(tipo_tributo);
+
+CREATE INDEX IF NOT EXISTS idx_pagos_cliente
+ON pagos_adelantados(cliente_id);
+
+CREATE INDEX IF NOT EXISTS idx_imputaciones_pago
+ON imputaciones_pago(pago_id);
+
+CREATE INDEX IF NOT EXISTS idx_imputaciones_obligacion
+ON imputaciones_pago(obligacion_id);
