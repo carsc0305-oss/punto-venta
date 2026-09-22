@@ -1,0 +1,39 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# === Entornos virtuales ===
+.env/
+.venv/
+env/
+venv/
+ENV/
+
+# === Base de datos SQLite ===
+database/data/*.db
+
+# === PDFs generados por ventas ===
+ventas_pdf/*.pdf
+
+# === IDEs y editores ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Sistema operativo ===
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# === Distribución / Empaquetado ===
+dist/
+build/
+*.spec
+*.exe
+
+# === Gemini ===
+.gemini/
