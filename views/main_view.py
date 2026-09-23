@@ -4,9 +4,12 @@ from tkinter import messagebox
 from config import ICON_PATH, ADMIN_IMG, ALMACEN_IMG, VENTAS_IMG
 from views.usuario_view import UsuariosView
 from views.producto_view import ProductoView
-from controllers.producto_controller import ProductoController
+from views.cliente_view import ClienteView
 
+
+from controllers.producto_controller import ProductoController
 from controllers.venta_controller import VentaController
+from controllers.cliente_controller import ClienteController
 
 class MainView(ctk.CTk):
     def __init__(self, usuario_controller):
@@ -16,6 +19,7 @@ class MainView(ctk.CTk):
         usuario = usuario_controller.usuario_actual
 
         self.producto_controller = ProductoController()
+        self.cliente_controller = ClienteController()
 
         # El controlador de ventas necesita el ID y nombre del cajero
         self.venta_controller = VentaController(usuario.id, usuario.nombre_completo)
@@ -92,6 +96,21 @@ class MainView(ctk.CTk):
                 self.sidebar, text="Ventas", height=36,
                 command=self._mostrar_ventas
             ).grid(row=row_idx, column=0, sticky="ew", padx=12, pady=3)
+            row_idx += 1
+            
+            if usuario.rol_id == 1:
+                ctk.CTkButton(
+                self.sidebar,
+                text="Clientes",
+                height=36,
+                command=self._mostrar_clientes
+            ).grid(
+                row=row_idx,
+                column=0,
+                sticky="ew",
+                padx=12,
+                pady=3
+            )
             row_idx += 1
 
         # Espacio flexible para empujar el botón de Cerrar Sesión al final
@@ -174,3 +193,27 @@ class MainView(ctk.CTk):
         self.content.grid_rowconfigure(1, weight=0)
         from views.venta_view import VentaView
         VentaView(self.content, self.venta_controller).grid(row=0, column=0, sticky="nsew")
+        
+    def _mostrar_clientes(self):
+        """Cambia el contenido central al módulo de clientes."""
+
+        self._limpiar_contenido()
+
+        self.content.grid_rowconfigure(
+            0,
+            weight=1
+        )
+
+        self.content.grid_rowconfigure(
+            1,
+            weight=0
+        )
+
+        ClienteView(
+            self.content,
+            self.cliente_controller
+        ).grid(
+            row=0,
+            column=0,
+            sticky="nsew"
+        )
