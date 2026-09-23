@@ -10,8 +10,9 @@ class ClienteController:
 
     def registrar_cliente(self, ruc, razon_social, estado="ACTIVO"):
 
-        ruc = ruc.strip()
-        razon_social = razon_social.strip()
+        # Convertir a texto por seguridad
+        ruc = str(ruc).strip()
+        razon_social = str(razon_social).strip()
 
         # Validaciones básicas
         if not ruc:
@@ -21,11 +22,14 @@ class ClienteController:
             raise ValueError("La razón social es obligatoria.")
 
         if len(ruc) != 11 or not ruc.isdigit():
-            raise ValueError("El RUC debe contener exactamente 11 dígitos.")
+            raise ValueError(
+                "El RUC debe contener exactamente 11 dígitos."
+            )
 
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             # Verificar si el RUC ya existe
@@ -52,7 +56,11 @@ class ClienteController:
                 (ruc, razon_social, estado)
                 VALUES (?, ?, ?)
                 """,
-                (ruc, razon_social, estado)
+                (
+                    ruc,
+                    razon_social,
+                    estado
+                )
             )
 
             conn.commit()
@@ -67,10 +75,12 @@ class ClienteController:
             )
 
         except Exception:
+
             conn.rollback()
             raise
 
         finally:
+
             conn.close()
 
 
@@ -80,16 +90,23 @@ class ClienteController:
 
     def buscar_por_ruc(self, ruc):
 
-        ruc = ruc.strip()
+        # IMPORTANTE:
+        # El RUC se maneja como texto.
+        ruc = str(ruc).strip()
 
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             cursor.execute(
                 """
-                SELECT id, ruc, razon_social, estado
+                SELECT
+                    id,
+                    ruc,
+                    razon_social,
+                    estado
                 FROM clientes
                 WHERE ruc = ?
                 """,
@@ -103,12 +120,13 @@ class ClienteController:
 
             return Cliente(
                 id=fila[0],
-                ruc=fila[1],
+                ruc=str(fila[1]),
                 razon_social=fila[2],
                 estado=fila[3]
             )
 
         finally:
+
             conn.close()
 
 
@@ -118,16 +136,21 @@ class ClienteController:
 
     def buscar(self, texto):
 
-        texto = texto.strip()
+        texto = str(texto).strip()
 
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             cursor.execute(
                 """
-                SELECT id, ruc, razon_social, estado
+                SELECT
+                    id,
+                    ruc,
+                    razon_social,
+                    estado
                 FROM clientes
                 WHERE ruc LIKE ?
                    OR razon_social LIKE ?
@@ -147,7 +170,7 @@ class ClienteController:
 
                 cliente = Cliente(
                     id=fila[0],
-                    ruc=fila[1],
+                    ruc=str(fila[1]),
                     razon_social=fila[2],
                     estado=fila[3]
                 )
@@ -157,6 +180,7 @@ class ClienteController:
             return clientes
 
         finally:
+
             conn.close()
 
 
@@ -169,11 +193,16 @@ class ClienteController:
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             cursor.execute(
                 """
-                SELECT id, ruc, razon_social, estado
+                SELECT
+                    id,
+                    ruc,
+                    razon_social,
+                    estado
                 FROM clientes
                 ORDER BY razon_social
                 """
@@ -188,7 +217,7 @@ class ClienteController:
                 clientes.append(
                     Cliente(
                         id=fila[0],
-                        ruc=fila[1],
+                        ruc=str(fila[1]),
                         razon_social=fila[2],
                         estado=fila[3]
                     )
@@ -197,6 +226,7 @@ class ClienteController:
             return clientes
 
         finally:
+
             conn.close()
 
 
@@ -212,9 +242,10 @@ class ClienteController:
         estado="ACTIVO"
     ):
 
-        ruc = ruc.strip()
-        razon_social = razon_social.strip()
+        ruc = str(ruc).strip()
+        razon_social = str(razon_social).strip()
 
+        # Validaciones
         if not ruc:
             raise ValueError("El RUC es obligatorio.")
 
@@ -222,11 +253,14 @@ class ClienteController:
             raise ValueError("La razón social es obligatoria.")
 
         if len(ruc) != 11 or not ruc.isdigit():
-            raise ValueError("El RUC debe contener exactamente 11 dígitos.")
+            raise ValueError(
+                "El RUC debe contener exactamente 11 dígitos."
+            )
 
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             # Comprobar que el RUC no pertenezca a otro cliente
@@ -237,18 +271,24 @@ class ClienteController:
                 WHERE ruc = ?
                 AND id != ?
                 """,
-                (ruc, cliente_id)
+                (
+                    ruc,
+                    cliente_id
+                )
             )
 
             if cursor.fetchone():
+
                 raise ValueError(
                     f"El RUC {ruc} ya pertenece a otro cliente."
                 )
 
+            # Actualizar
             cursor.execute(
                 """
                 UPDATE clientes
-                SET ruc = ?,
+                SET
+                    ruc = ?,
                     razon_social = ?,
                     estado = ?
                 WHERE id = ?
@@ -264,6 +304,7 @@ class ClienteController:
             conn.commit()
 
             if cursor.rowcount == 0:
+
                 raise ValueError(
                     "No se encontró el cliente indicado."
                 )
@@ -271,10 +312,12 @@ class ClienteController:
             return True
 
         except Exception:
+
             conn.rollback()
             raise
 
         finally:
+
             conn.close()
 
 
@@ -290,6 +333,7 @@ class ClienteController:
         ]
 
         if estado not in estados_validos:
+
             raise ValueError(
                 "El estado debe ser ACTIVO o INACTIVO."
             )
@@ -297,6 +341,7 @@ class ClienteController:
         conn = conectar_db()
 
         try:
+
             cursor = conn.cursor()
 
             cursor.execute(
@@ -305,7 +350,10 @@ class ClienteController:
                 SET estado = ?
                 WHERE id = ?
                 """,
-                (estado, cliente_id)
+                (
+                    estado,
+                    cliente_id
+                )
             )
 
             conn.commit()
@@ -313,8 +361,10 @@ class ClienteController:
             return cursor.rowcount > 0
 
         except Exception:
+
             conn.rollback()
             raise
 
         finally:
+
             conn.close()
